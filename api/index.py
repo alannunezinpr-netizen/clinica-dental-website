@@ -1,10 +1,11 @@
 import sys
 import os
 
-# Add the clinica root to the path so we can import app.py
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root to path
+root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, root)
 
 from app import app
 
-# Vercel calls this WSGI handler
+# Vercel needs the WSGI app exposed as 'app' or 'handler'
 handler = app

@@ -1,0 +1,15 @@
+package.json
+package-lock.json
+node_modules/
+app/
+components/
+public/
+tailwind.config.ts
+tsconfig.json
+next.config.js
+README.md
+clinica.db
+seed.py
+start.command
+start.sh
+Procfile
