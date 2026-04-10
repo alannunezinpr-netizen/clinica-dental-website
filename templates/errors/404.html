@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 – Página No Encontrada</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+<div class="error-page">
+  <div>
+    <div class="error-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <div class="error-code">404</div>
+    <div class="error-title">Página No Encontrada</div>
+    <div class="error-text">El recurso que buscas no existe o fue movido.<br>Verifica la dirección o regresa al dashboard.</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <a href="javascript:history.back()" class="btn btn-secondary">← Regresar</a>
+      <a href="/" class="btn btn-primary">Dashboard</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

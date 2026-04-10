@@ -1,0 +1,172 @@
+{% from "icons.html" import icon_user, icon_map_pin, icon_shield, icon_alert, icon_phone, icon_bell, icon_check, icon_clipboard %}
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if action=='edit' else 'Nuevo' }} Paciente{% endblock %}
+{% block page_title %}{{ 'Editar Paciente' if action=='edit' else 'Nuevo Paciente' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;">
+  <form method="POST" action="{{ url_for('patient_edit', pid=pid) if action=='edit' else url_for('patient_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <!-- PERSONAL INFO -->
+    <div class="form-card" style="margin-bottom:20px;">
+      <div class="form-card-header">{{ icon_user() }} Información Personal</div>
+      <div class="form-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Nombre</label>
+            <input type="text" name="first_name" class="form-control"
+                   value="{{ patient.get('first_name','') }}" required placeholder="Nombre(s)">
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Apellido</label>
+            <input type="text" name="last_name" class="form-control"
+                   value="{{ patient.get('last_name','') }}" required placeholder="Apellido(s)">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Fecha de Nacimiento</label>
+            <input type="date" name="dob" class="form-control" value="{{ patient.get('dob','') }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Género</label>
+            <select name="gender" class="form-control">
+              <option value="">Seleccionar...</option>
+              <option value="M" {% if patient.get('gender')=='M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if patient.get('gender')=='F' %}selected{% endif %}>Femenino</option>
+              <option value="O" {% if patient.get('gender')=='O' %}selected{% endif %}>Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Teléfono Principal</label>
+            <input type="tel" name="phone" class="form-control"
+                   value="{{ patient.get('phone','') }}" placeholder="787-XXX-XXXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Teléfono Alternativo</label>
+            <input type="tel" name="phone_alt" class="form-control"
+                   value="{{ patient.get('phone_alt','') }}" placeholder="787-XXX-XXXX">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Correo Electrónico</label>
+          <input type="email" name="email" class="form-control"
+                 value="{{ patient.get('email','') }}" placeholder="correo@ejemplo.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDRESS -->
+    <div class="form-card" style="margin-bottom:20px;">
+      <div class="form-card-header">{{ icon_map_pin() }} Dirección</div>
+      <div class="form-card-body">
+        <div class="form-group">
+          <label class="form-label">Dirección</label>
+          <input type="text" name="address" class="form-control"
+                 value="{{ patient.get('address','') }}" placeholder="Calle, urb., apartamento...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ciudad / Pueblo</label>
+          <input type="text" name="city" class="form-control"
+                 value="{{ patient.get('city','') }}" placeholder="Gurabo, Caguas, etc.">
+        </div>
+      </div>
+    </div>
+
+    <!-- INSURANCE -->
+    <div class="form-card" style="margin-bottom:20px;">
+      <div class="form-card-header">{{ icon_shield() }} Seguro Médico</div>
+      <div class="form-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre del Seguro</label>
+            <input type="text" name="insurance_name" class="form-control"
+                   value="{{ patient.get('insurance_name','') }}"
+                   placeholder="Triple-S, MCS, Humana...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Número de Póliza / ID</label>
+            <input type="text" name="insurance_id" class="form-control"
+                   value="{{ patient.get('insurance_id','') }}" placeholder="ID del seguro">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDICAL ALERTS -->
+    <div class="form-card" style="margin-bottom:20px;border:1px solid #fca5a5;">
+      <div class="form-card-header" style="background:#fff5f5;color:#991b1b;">
+        {{ icon_alert() }} Alertas Médicas <span style="font-size:11px;font-weight:500;opacity:.7;">(Encriptado)</span>
+      </div>
+      <div class="form-card-body">
+        <div class="form-group mb-0">
+          <label class="form-label">Alertas / Condiciones Especiales</label>
+          <textarea name="medical_alerts" class="form-control" rows="3"
+                    placeholder="Alergias, medicamentos, condiciones médicas importantes...">{{ patient.get('medical_alerts','') }}</textarea>
+          <div class="form-hint">Esta información está encriptada y es visible solo en el sistema.</div>
+        </div>
+        <div class="form-group" style="margin-top:14px;margin-bottom:0;">
+          <label class="form-label">Notas de Oficina</label>
+          <textarea name="notes" class="form-control" rows="2"
+                    placeholder="Notas generales del paciente...">{{ patient.get('notes','') }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMERGENCY CONTACT -->
+    <div class="form-card" style="margin-bottom:20px;">
+      <div class="form-card-header">{{ icon_phone() }} Contacto de Emergencia</div>
+      <div class="form-card-body">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" name="ec_name" class="form-control"
+                   value="{{ ec.name if ec else '' }}" placeholder="Nombre completo">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Relación</label>
+            <select name="ec_relationship" class="form-control">
+              <option value="">Seleccionar...</option>
+              {% for rel in ['Esposo/a','Madre','Padre','Hijo/a','Hermano/a','Familiar','Amigo/a'] %}
+              <option value="{{ rel }}" {% if ec and ec.relationship==rel %}selected{% endif %}>{{ rel }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Teléfono</label>
+            <input type="tel" name="ec_phone" class="form-control"
+                   value="{{ ec.phone if ec else '' }}" placeholder="787-XXX-XXXX">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECALL -->
+    <div class="form-card" style="margin-bottom:24px;">
+      <div class="form-card-header">{{ icon_bell() }} Configuración de Recall</div>
+      <div class="form-card-body">
+        <div class="form-group mb-0" style="max-width:300px;">
+          <label class="form-label">Intervalo de Recall</label>
+          <select name="recall_interval" class="form-control">
+            {% for months, label in [(3,'Cada 3 meses'),(6,'Cada 6 meses (recomendado)'),(9,'Cada 9 meses'),(12,'Cada 12 meses')] %}
+            <option value="{{ months }}" {% if patient.get('recall_interval', 6)|int == months %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <a href="{{ url_for('patient_profile', pid=pid) if action=='edit' else url_for('patients_list') }}"
+         class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary">
+        {% if action=='edit' %}{{ icon_check() }} Guardar Cambios{% else %}{{ icon_check() }} Registrar Paciente{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

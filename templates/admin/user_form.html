@@ -1,0 +1,117 @@
+{% from "icons.html" import icon_user, icon_edit, icon_check, icon_shield, icon_lock, icon_eye, icon_tooth %}
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if action=='edit' else 'Nuevo' }} Usuario{% endblock %}
+{% block page_title %}{{ 'Editar Usuario' if action=='edit' else 'Nuevo Usuario' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;">
+  <form method="POST" action="{{ url_for('admin_user_edit', uid=uid) if action=='edit' else url_for('admin_user_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-card">
+      <div class="form-card-header">
+        {% if action=='edit' %}{{ icon_edit() }} Editar Usuario{% else %}{{ icon_user() }} Crear Nuevo Usuario{% endif %}
+      </div>
+      <div class="form-card-body">
+
+        <div class="form-group">
+          <label class="form-label form-label-required">Nombre Completo</label>
+          <input type="text" name="full_name" class="form-control" required
+                 value="{{ user.get('full_name','') }}"
+                 placeholder="Nombre y apellido">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Username</label>
+            <input type="text" name="username" class="form-control"
+                   value="{{ user.get('username','') }}"
+                   placeholder="nombre.usuario"
+                   {{ 'readonly style=background:var(--bg)' if action=='edit' else 'required' }}>
+            {% if action == 'edit' %}
+            <div class="form-hint">El username no se puede cambiar.</div>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correo Electrónico</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ user.get('email','') }}"
+                   placeholder="correo@clinica.pr">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required">Rol</label>
+          <select name="role" class="form-control">
+            <option value="front_desk" {{ 'selected' if user.get('role')=='front_desk' }}>Recepción / Front Desk</option>
+            <option value="dentist" {{ 'selected' if user.get('role')=='dentist' }}>Dentista</option>
+            <option value="admin" {{ 'selected' if user.get('role')=='admin' }}>Administrador</option>
+          </select>
+          <div class="form-hint">
+            Admin: acceso total. Dentista: puede crear notas y planes. Recepción: gestión de citas y pacientes.
+          </div>
+        </div>
+
+        {% if action == 'edit' %}
+        <div class="form-check" style="margin-bottom:16px;">
+          <input type="checkbox" name="is_active" id="is_active"
+                 {{ 'checked' if user.get('is_active',1) }}>
+          <label for="is_active" style="font-weight:600;cursor:pointer;">Cuenta activa</label>
+        </div>
+        {% endif %}
+
+        <div class="divider"></div>
+
+        {% if action == 'edit' %}
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          {{ icon_lock() }} Cambiar Contraseña <span style="font-weight:400;">(dejar vacío para mantener la actual)</span>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">Nueva Contraseña</label>
+          <div class="password-wrapper">
+            <input type="password" name="new_password" id="password-field" class="form-control"
+                   placeholder="Mínimo 8 caracteres" minlength="8">
+            <button type="button" class="password-toggle" onclick="togglePwd()">
+              <span id="pwd-eye">{{ icon_eye() }}</span>
+            </button>
+          </div>
+        </div>
+        {% else %}
+        <div class="form-group mb-0">
+          <label class="form-label form-label-required">Contraseña</label>
+          <div class="password-wrapper">
+            <input type="password" name="password" id="password-field" class="form-control"
+                   placeholder="Mínimo 8 caracteres" minlength="8" required>
+            <button type="button" class="password-toggle" onclick="togglePwd()">
+              <span id="pwd-eye">{{ icon_eye() }}</span>
+            </button>
+          </div>
+          <div class="form-hint">Mínimo 8 caracteres. Use letras, números y símbolos.</div>
+        </div>
+        {% endif %}
+
+      </div>
+      <div class="form-card-footer">
+        <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          {% if action=='edit' %}{{ icon_check() }} Guardar Cambios{% else %}{{ icon_check() }} Crear Usuario{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function togglePwd() {
+  const f = document.getElementById('password-field');
+  const icon = document.getElementById('pwd-eye');
+  if (f.type === 'password') {
+    f.type = 'text';
+    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  } else {
+    f.type = 'password';
+    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+}
+</script>
+{% endblock %}

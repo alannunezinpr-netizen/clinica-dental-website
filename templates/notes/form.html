@@ -1,0 +1,106 @@
+{% from "icons.html" import icon_note, icon_calendar, icon_check, icon_refresh %}
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if action=='edit' else 'Nueva' }} Nota Clínica{% endblock %}
+{% block page_title %}{{ 'Editar Nota Clínica' if action=='edit' else 'Nueva Nota Clínica' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+  <form method="POST" action="{{ url_for('note_edit', nid=note.id) if action=='edit' else url_for('note_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-card">
+      <div class="form-card-header">
+        {{ icon_note() }} {{ 'Editar Nota Clínica' if action=='edit' else 'Nueva Nota Clínica' }}
+      </div>
+      <div class="form-card-body">
+
+        {% if action != 'edit' %}
+        <!-- PATIENT SELECT -->
+        <div class="form-group">
+          <label class="form-label form-label-required">Paciente</label>
+          <select name="patient_id" class="form-control" required>
+            <option value="">— Seleccionar paciente —</option>
+            {% for p in all_patients %}
+            <option value="{{ p.id }}" {{ 'selected' if pid==p.id|string }}>
+              {{ p.last_name }}, {{ p.first_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- LINKED APPOINTMENT -->
+        {% if appt %}
+        <div class="alert alert-info">
+          <span class="alert-icon">{{ icon_calendar() }}</span>
+          <span>Nota vinculada a cita del <strong>{{ appt.date }}</strong> – {{ appt.reason or 'Sin motivo' }}</span>
+        </div>
+        <input type="hidden" name="appointment_id" value="{{ aid }}">
+        {% else %}
+        <div class="form-group">
+          <label class="form-label">Cita Relacionada (opcional)</label>
+          <input type="hidden" name="appointment_id" value="{{ aid or '' }}">
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- TITLE -->
+        <div class="form-group">
+          <label class="form-label">Título / Tipo de Visita</label>
+          <input type="text" name="title" class="form-control"
+                 value="{{ note.title if note else '' }}"
+                 placeholder="Ej: Limpieza semestral, Emergencia, Examen inicial...">
+        </div>
+
+        <!-- CHIEF COMPLAINT -->
+        <div class="form-group">
+          <label class="form-label">Motivo de Consulta (Chief Complaint)</label>
+          <textarea name="chief_complaint" class="form-control" rows="2"
+                    placeholder="¿Por qué vino el paciente hoy?">{{ note.chief_complaint if note else '' }}</textarea>
+        </div>
+
+        <!-- CLINICAL NOTES -->
+        <div class="form-group">
+          <label class="form-label form-label-required">Notas Clínicas</label>
+          <textarea name="clinical_notes" class="form-control" rows="6" required
+                    placeholder="Hallazgos clínicos, observaciones, diagnóstico, plan de tratamiento...">{{ note.clinical_notes if note else '' }}</textarea>
+          <div class="form-hint">Documenta todos los hallazgos, procedimientos realizados y observaciones clínicas.</div>
+        </div>
+
+        <!-- TREATMENT PERFORMED -->
+        <div class="form-group">
+          <label class="form-label">Tratamiento Realizado</label>
+          <textarea name="treatment_performed" class="form-control" rows="3"
+                    placeholder="Procedimientos realizados durante esta visita...">{{ note.treatment_performed if note else '' }}</textarea>
+        </div>
+
+        <!-- FOLLOW-UP -->
+        <div style="background:var(--warning-light);border:1px solid #fde68a;border-radius:var(--radius);padding:14px 16px;">
+          <div class="form-check" style="margin-bottom:10px;">
+            <input type="checkbox" name="follow_up_needed" id="follow_up_check"
+                   {{ 'checked' if note and note.follow_up_needed }}
+                   onchange="document.getElementById('follow-up-notes-row').style.display=this.checked?'block':'none'">
+            <label for="follow_up_check" style="font-weight:600;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              {{ icon_refresh() }} Requiere seguimiento / próxima cita
+            </label>
+          </div>
+          <div id="follow-up-notes-row" style="display:{{ 'block' if note and note.follow_up_needed else 'none' }};">
+            <textarea name="follow_up_notes" class="form-control" rows="2"
+                      placeholder="¿Qué seguimiento se necesita?">{{ note.follow_up_notes if note else '' }}</textarea>
+          </div>
+        </div>
+
+      </div>
+      <div class="form-card-footer">
+        {% if action == 'edit' and note %}
+        <a href="{{ url_for('patient_profile', pid=note.patient_id) }}" class="btn btn-secondary">Cancelar</a>
+        {% else %}
+        <a href="{{ url_for('patients_list') }}" class="btn btn-secondary">Cancelar</a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">
+          {% if action=='edit' %}{{ icon_check() }} Guardar Cambios{% else %}{{ icon_note() }} Guardar Nota Clínica{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

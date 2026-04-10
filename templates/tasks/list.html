@@ -1,0 +1,172 @@
+{% from "icons.html" import icon_task, icon_check, icon_trash, icon_alert, icon_plus, icon_filter, icon_user, icon_calendar %}
+{% extends "base.html" %}
+{% block title %}Tareas{% endblock %}
+{% block page_title %}Tareas{% endblock %}
+
+{% block content %}
+
+<!-- QUICK CREATE TASK -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-header">
+    <div class="card-title">{{ icon_plus() }} Crear Tarea Rápida</div>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('task_new') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:2;min-width:200px;">
+          <label class="form-label">Título de la tarea</label>
+          <input type="text" name="title" class="form-control" placeholder="Describe la tarea..." required>
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <label class="form-label">Prioridad</label>
+          <select name="priority" class="form-control">
+            <option value="normal">Normal</option>
+            <option value="high">Alta</option>
+            <option value="urgent">Urgente</option>
+            <option value="low">Baja</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <label class="form-label">Asignar a</label>
+          <select name="assigned_to" class="form-control">
+            {% for s in all_staff %}
+            <option value="{{ s.id }}" {{ 'selected' if s.id == current_user.id }}>{{ s.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <label class="form-label">Fecha límite</label>
+          <input type="date" name="due_date" class="form-control" value="{{ today }}">
+        </div>
+        <div>
+          <button type="submit" class="btn btn-primary">{{ icon_plus() }} Crear Tarea</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body" style="padding:12px 16px;">
+    <form method="GET" action="{{ url_for('tasks_list') }}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div class="filter-tabs">
+          {% for s, label in [('open','Abiertas'),('in_progress','En Progreso'),('done','Completadas'),('all','Todas')] %}
+          <a href="{{ url_for('tasks_list', status=s, assigned=assigned_filter, priority=priority_filter) }}"
+             class="filter-tab {{ 'active' if status_filter==s }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+        <select name="assigned" class="form-control" style="min-width:160px;">
+          <option value="">Todos los usuarios</option>
+          {% for s in all_staff %}
+          <option value="{{ s.id }}" {{ 'selected' if assigned_filter==s.id|string }}>{{ s.full_name }}</option>
+          {% endfor %}
+        </select>
+        <select name="priority" class="form-control" style="min-width:130px;">
+          <option value="">Todas las prioridades</option>
+          <option value="urgent" {{ 'selected' if priority_filter=='urgent' }}>Urgente</option>
+          <option value="high" {{ 'selected' if priority_filter=='high' }}>Alta</option>
+          <option value="normal" {{ 'selected' if priority_filter=='normal' }}>Normal</option>
+          <option value="low" {{ 'selected' if priority_filter=='low' }}>Baja</option>
+        </select>
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ icon_filter() }} Filtrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TASK LIST -->
+{% if tasks %}
+<div style="display:flex;flex-direction:column;gap:6px;">
+  {% for t in tasks %}
+  <div class="task-item priority-{{ t.priority }} {{ 'overdue' if t.due_date and t.due_date < today and t.status != 'done' }}"
+       data-task="{{ t.id }}">
+
+    <!-- PRIORITY DOT -->
+    <div class="task-priority-dot"></div>
+
+    <!-- DONE CHECKBOX -->
+    <div style="flex-shrink:0;padding-top:2px;">
+      {% if t.status != 'done' %}
+      <input type="checkbox" class="task-done-check" data-tid="{{ t.id }}"
+             style="width:17px;height:17px;accent-color:var(--success);cursor:pointer;">
+      {% else %}
+      <span style="color:var(--success);display:flex;align-items:center;">{{ icon_check() }}</span>
+      {% endif %}
+    </div>
+
+    <!-- TASK INFO -->
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="task-title {{ 'text-muted' if t.status=='done' }}"
+              style="{{ 'text-decoration:line-through;' if t.status=='done' }}">
+          {{ t.title }}
+        </span>
+        <span class="badge badge-{{ 'red' if t.priority=='urgent' else 'orange' if t.priority=='high' else 'blue' if t.priority=='normal' else 'gray' }}">
+          {{ t.priority.title() }}
+        </span>
+        {% if t.status == 'in_progress' %}
+        <span class="badge badge-purple">En Progreso</span>
+        {% endif %}
+        {% if t.due_date and t.due_date < today and t.status != 'done' %}
+        <span class="badge badge-red">{{ icon_alert() }} Vencida</span>
+        {% endif %}
+      </div>
+      <div class="task-meta">
+        {% if t.first_name %}
+        <span>{{ icon_user() }} <a href="{{ url_for('patient_profile', pid=t.patient_id) }}" style="color:var(--primary);">{{ t.last_name }}, {{ t.first_name }}</a> · </span>
+        {% endif %}
+        {% if t.assigned_name %}<span>{{ t.assigned_name }} · </span>{% endif %}
+        {% if t.due_date %}<span>{{ icon_calendar() }} {{ t.due_date }} · </span>{% endif %}
+        {% if t.notes %}<span>{{ t.notes[:60] }}</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+      {% if t.status != 'done' %}
+        {% if t.status == 'open' %}
+        <form method="POST" action="{{ url_for('task_status', tid=t.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="in_progress">
+          <button type="submit" class="btn btn-ghost btn-sm">Iniciar</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('task_status', tid=t.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="done">
+          <button type="submit" class="btn btn-success btn-sm">{{ icon_check() }} Listo</button>
+        </form>
+      {% endif %}
+      <form method="POST" action="{{ url_for('task_delete', tid=t.id) }}"
+            class="confirm-delete" data-confirm="¿Eliminar esta tarea?" style="margin:0;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-ghost btn-icon btn-sm" style="color:var(--danger);" title="Eliminar">{{ icon_trash() }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="font-size:12.5px;color:var(--text-muted);margin-top:12px;text-align:center;">
+  {{ tasks|length }} tarea(s)
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">{{ icon_task() }}</div>
+    <div class="empty-state-title">
+      {% if status_filter == 'done' %}No hay tareas completadas{% else %}Sin tareas pendientes{% endif %}
+    </div>
+    <div class="empty-state-text">
+      {% if status_filter in ['open',''] %}Todo está al día por ahora.{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,147 @@
+{% from "icons.html" import icon_search, icon_calendar, icon_edit, icon_check %}
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if action=='edit' else 'Nueva' }} Cita{% endblock %}
+{% block page_title %}{{ 'Editar Cita' if action=='edit' else 'Nueva Cita' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;">
+  <form method="POST" action="{{ url_for('appointment_edit', aid=aid) if action=='edit' else url_for('appointment_new') }}"
+        id="appt-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next_url" value="{{ request.referrer or '' }}">
+
+    <div class="form-card">
+      <div class="form-card-header">
+        {% if action=='edit' %}{{ icon_edit() }} Editar Cita{% else %}{{ icon_calendar() }} Programar Nueva Cita{% endif %}
+      </div>
+      <div class="form-card-body">
+
+        <!-- PATIENT -->
+        <div class="form-group">
+          <label class="form-label form-label-required">Paciente</label>
+          {% if action == 'edit' %}
+            <select name="patient_id" class="form-control" required>
+              {% for p in all_patients %}
+              <option value="{{ p.id }}" {{ 'selected' if appt and appt.patient_id==p.id }}>
+                {{ p.last_name }}, {{ p.first_name }}
+              </option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <div class="search-wrapper" style="position:relative;">
+              <span class="search-icon">{{ icon_search() }}</span>
+              <input type="text" id="patient-search" class="form-control search-input"
+                     placeholder="Buscar paciente por nombre o teléfono..."
+                     autocomplete="off" value="">
+              <input type="hidden" name="patient_id" id="patient_id"
+                     value="{{ patient_id }}" required>
+            </div>
+            {% if patient_id %}
+            <div style="font-size:12px;color:var(--success);margin-top:4px;display:flex;align-items:center;gap:4px;">
+              {{ icon_check() }} Paciente seleccionado (ID {{ patient_id }})
+            </div>
+            {% endif %}
+            <div style="margin-top:6px;">
+              <span style="font-size:12px;color:var(--text-muted);">O seleccionar de lista:</span>
+              <select onchange="document.getElementById('patient_id').value=this.value;document.getElementById('patient-search').value=this.options[this.selectedIndex].text"
+                      class="form-control" style="margin-top:4px;">
+                <option value="">— Seleccionar paciente —</option>
+                {% for p in all_patients %}
+                <option value="{{ p.id }}" {{ 'selected' if patient_id==p.id|string }}>
+                  {{ p.last_name }}, {{ p.first_name }} ({{ p.phone or 'sin tel.' }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- DATE, TIME, DURATION -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label form-label-required">Fecha</label>
+            <input type="date" name="date" id="appt-date" class="form-control" required
+                   value="{{ appt.date if appt and appt.date else today }}"
+                   min="{{ today }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Hora</label>
+            <input type="time" name="time" id="appt-time" class="form-control" required
+                   value="{{ appt.time[:5] if appt and appt.time else '09:00' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duración (min)</label>
+            <select name="duration" class="form-control">
+              {% for d in [15,30,45,60,90,120] %}
+              <option value="{{ d }}" {{ 'selected' if appt and appt.duration==d or (not appt and d==60) }}>{{ d }} min</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- DENTIST + STATUS -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Dentista</label>
+            <select name="dentist_id" class="form-control" required>
+              <option value="">Seleccionar dentista...</option>
+              {% for d in dentists %}
+              <option value="{{ d.id }}" {{ 'selected' if appt and appt.dentist_id==d.id }}>{{ d.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select name="status" id="status-select" class="form-control">
+              {% for s, label in [('scheduled','Programada'),('confirmed','Confirmada'),('checked_in','Check-In'),('completed','Completada'),('cancelled','Cancelada'),('no_show','No Show')] %}
+              <option value="{{ s }}" {{ 'selected' if appt and appt.status==s or (not appt and s=='scheduled') }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- REASON -->
+        <div class="form-group">
+          <label class="form-label">Motivo de la Cita</label>
+          <input type="text" name="reason" class="form-control"
+                 value="{{ appt.reason if appt else '' }}"
+                 placeholder="Ej: Limpieza dental, Empaste, Consulta...">
+        </div>
+
+        <!-- NOTES -->
+        <div class="form-group">
+          <label class="form-label">Notas Internas</label>
+          <textarea name="notes" class="form-control" rows="2"
+                    placeholder="Instrucciones especiales, preparación...">{{ appt.notes if appt else '' }}</textarea>
+        </div>
+
+        <!-- PAYMENT STATUS -->
+        <div class="form-group">
+          <label class="form-label">Estado de Pago</label>
+          <select name="payment_status" class="form-control" style="max-width:200px;">
+            {% for s, label in [('unpaid','Pendiente'),('partial','Parcial'),('paid','Pagado')] %}
+            <option value="{{ s }}" {{ 'selected' if appt and appt.payment_status==s }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- CANCELLATION REASON -->
+        <div id="cancel-reason-row" style="display:none;">
+          <div class="form-group mb-0">
+            <label class="form-label">Razón de Cancelación</label>
+            <textarea name="cancellation_reason" class="form-control" rows="2"
+                      placeholder="Motivo de cancelación...">{{ appt.cancellation_reason if appt else '' }}</textarea>
+          </div>
+        </div>
+
+      </div>
+      <div class="form-card-footer">
+        <a href="{{ url_for('appointments_list') }}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          {% if action=='edit' %}{{ icon_check() }} Guardar Cambios{% else %}{{ icon_calendar() }} Programar Cita{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

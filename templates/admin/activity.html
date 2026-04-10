@@ -1,0 +1,106 @@
+{% from "icons.html" import icon_activity, icon_check, icon_users, icon_calendar, icon_note, icon_task, icon_shield, icon_clipboard, icon_alert, icon_logout %}
+{% extends "base.html" %}
+{% block title %}Registro de Actividad{% endblock %}
+{% block page_title %}Registro de Actividad{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+  <div style="font-size:13.5px;color:var(--text-muted);">{{ total }} evento(s) registrados</div>
+</div>
+
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha / Hora</th>
+        <th>Usuario</th>
+        <th>Acción</th>
+        <th>Entidad</th>
+        <th>Detalles</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="font-size:12.5px;white-space:nowrap;color:var(--text-muted);">
+          {{ log.created_at[:16] if log.created_at else '—' }}
+        </td>
+        <td>
+          <span style="font-weight:600;font-size:13px;">{{ log.username or '—' }}</span>
+        </td>
+        <td>
+          {% set action_colors = {
+            'login': 'green', 'logout': 'gray',
+            'login_failed': 'red', 'login_blocked': 'red',
+            'patient_created': 'blue', 'patient_updated': 'teal',
+            'appointment_created': 'blue', 'appointment_updated': 'teal',
+            'appointment_completed': 'green', 'appointment_cancelled': 'gray',
+            'note_added': 'purple', 'note_updated': 'teal', 'note_deleted': 'red',
+            'task_created': 'blue', 'task_done': 'green',
+            'user_created': 'blue', 'user_updated': 'teal',
+            'user_activated': 'green', 'user_deactivated': 'red',
+            'treatment_plan_created': 'purple'
+          } %}
+          {% set color = action_colors.get(log.action, 'gray') %}
+          <span class="badge badge-{{ color }}" style="display:inline-flex;align-items:center;gap:4px;">
+            {% if 'login' in log.action and 'failed' not in log.action and 'blocked' not in log.action %}{{ icon_check() }}
+            {% elif 'failed' in log.action or 'blocked' in log.action %}{{ icon_alert() }}
+            {% elif 'logout' in log.action %}{{ icon_logout() }}
+            {% elif 'patient' in log.action %}{{ icon_users() }}
+            {% elif 'appointment' in log.action %}{{ icon_calendar() }}
+            {% elif 'note' in log.action %}{{ icon_note() }}
+            {% elif 'task' in log.action %}{{ icon_task() }}
+            {% elif 'user' in log.action %}{{ icon_shield() }}
+            {% else %}{{ icon_clipboard() }}{% endif %}
+            {{ log.action.replace('_', ' ').title() }}
+          </span>
+        </td>
+        <td style="font-size:12.5px;color:var(--text-muted);">
+          {% if log.entity_type %}
+            {{ log.entity_type.replace('_',' ').title() }}
+            {% if log.entity_id %}
+              <span style="font-family:monospace;">#{{ log.entity_id }}</span>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-size:12.5px;color:var(--text-muted);max-width:200px;" class="truncate">
+          {{ log.details or '—' }}
+        </td>
+        <td style="font-size:11.5px;color:var(--text-light);font-family:monospace;">
+          {{ log.ip_address or '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- PAGINATION -->
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="{{ url_for('admin_activity', page=page-1) }}" class="page-link">← Anterior</a>
+  {% endif %}
+
+  {% for p in range(1, pages+1) %}
+    {% if p == page %}
+    <span class="page-link active">{{ p }}</span>
+    {% elif p <= 3 or p >= pages-2 or (p >= page-2 and p <= page+2) %}
+    <a href="{{ url_for('admin_activity', page=p) }}" class="page-link">{{ p }}</a>
+    {% elif p == 4 or p == pages-3 %}
+    <span class="page-link disabled">…</span>
+    {% endif %}
+  {% endfor %}
+
+  {% if page < pages %}
+  <a href="{{ url_for('admin_activity', page=page+1) }}" class="page-link">Siguiente →</a>
+  {% endif %}
+</div>
+<div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px;">
+  Página {{ page }} de {{ pages }} · {{ total }} registros
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,169 @@
+{% from "icons.html" import icon_bell, icon_alert, icon_phone, icon_calendar, icon_check, icon_refresh %}
+{% extends "base.html" %}
+{% block title %}Recalls{% endblock %}
+{% block page_title %}Recalls{% endblock %}
+
+{% block content %}
+
+<!-- FILTER BAR -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body" style="padding:12px 18px;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div class="filter-tabs">
+        <a href="{{ url_for('recalls_list') }}" class="filter-tab {{ 'active' if not status_filter }}">Activos</a>
+        <a href="{{ url_for('recalls_list', status='overdue') }}" class="filter-tab {{ 'active' if status_filter=='overdue' }}">Vencidos</a>
+        <a href="{{ url_for('recalls_list', status='pending') }}" class="filter-tab {{ 'active' if status_filter=='pending' }}">Pendientes</a>
+        <a href="{{ url_for('recalls_list', status='contacted') }}" class="filter-tab {{ 'active' if status_filter=='contacted' }}">Contactados</a>
+        <a href="{{ url_for('recalls_list', status='completed') }}" class="filter-tab {{ 'active' if status_filter=='completed' }}">Completados</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERDUE RECALLS -->
+{% set overdue = recalls | selectattr('status','in',['overdue','pending']) | selectattr('due_date','le',today) | list %}
+{% if overdue %}
+<div class="card" style="margin-bottom:20px;border:1px solid #fca5a5;">
+  <div class="card-header" style="background:#fff5f5;">
+    <div class="card-title" style="color:#991b1b;">{{ icon_alert() }} Recalls Vencidos ({{ overdue|length }})</div>
+  </div>
+  <div>
+    {% for r in recalls %}
+    {% if r.status in ['overdue','pending'] and r.due_date <= today %}
+    <div class="recall-item overdue">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13.5px;">
+          <a href="{{ url_for('patient_profile', pid=r.patient_id) }}" style="color:var(--text);">
+            {{ r.last_name }}, {{ r.first_name }}
+          </a>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          {{ icon_phone() }} {{ r.phone or 'Sin teléfono' }}{% if r.phone_alt %} / {{ r.phone_alt }}{% endif %}
+          · Vencido: <strong style="color:var(--danger);">{{ r.due_date }}</strong>
+          · Intervalo: {{ r.recall_interval }} meses
+          {% if r.last_visit %} · Última visita: {{ r.last_visit }}{% endif %}
+        </div>
+        {% if r.notes %}<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">{{ r.notes }}</div>{% endif %}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+        <form method="POST" action="{{ url_for('recall_status', rid=r.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="contacted">
+          <button type="submit" class="btn btn-secondary btn-sm">{{ icon_phone() }} Contactado</button>
+        </form>
+        <a href="{{ url_for('appointment_new') }}?patient_id={{ r.patient_id }}" class="btn btn-primary btn-sm">{{ icon_calendar() }} Cita</a>
+        <form method="POST" action="{{ url_for('recall_status', rid=r.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="completed">
+          <button type="submit" class="btn btn-success btn-sm">{{ icon_check() }} Listo</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PENDING / CONTACTED RECALLS -->
+{% set pending_list = recalls | rejectattr('due_date','le',today) | list %}
+{% set contacted_list = recalls | selectattr('status','eq','contacted') | list %}
+{% if pending_list or contacted_list %}
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <div class="card-title">{{ icon_bell() }} Recalls Activos</div>
+  </div>
+  <div>
+    {% for r in recalls %}
+    {% if not (r.status in ['overdue','pending'] and r.due_date <= today) and r.status != 'completed' %}
+    <div class="recall-item" style="{{ 'background:#eff6ff;' if r.status=='contacted' }}">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:700;font-size:13.5px;">
+            <a href="{{ url_for('patient_profile', pid=r.patient_id) }}" style="color:var(--text);">
+              {{ r.last_name }}, {{ r.first_name }}
+            </a>
+          </span>
+          <span class="badge badge-{{ 'blue' if r.status=='contacted' else 'amber' }}">
+            {{ 'Contactado' if r.status=='contacted' else 'Pendiente' }}
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          {{ icon_phone() }} {{ r.phone or 'Sin teléfono' }}
+          · Fecha recall: <strong>{{ r.due_date }}</strong>
+          · Intervalo: {{ r.recall_interval }} meses
+          {% if r.last_visit %} · Última visita: {{ r.last_visit }}{% endif %}
+        </div>
+        {% if r.notes %}<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">{{ r.notes }}</div>{% endif %}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        {% if r.status == 'pending' %}
+        <form method="POST" action="{{ url_for('recall_status', rid=r.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="contacted">
+          <button type="submit" class="btn btn-secondary btn-sm">{{ icon_phone() }} Contactar</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('appointment_new') }}?patient_id={{ r.patient_id }}" class="btn btn-primary btn-sm">{{ icon_calendar() }} Cita</a>
+        <form method="POST" action="{{ url_for('recall_status', rid=r.id) }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="completed">
+          <button type="submit" class="btn btn-success btn-sm">{{ icon_check() }}</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PATIENTS WITHOUT RECALL RECORD -->
+{% if overdue_patients %}
+<div class="card" style="margin-bottom:20px;border:1px solid #fde68a;">
+  <div class="card-header" style="background:var(--warning-light);">
+    <div class="card-title" style="color:#92400e;">{{ icon_alert() }} Pacientes Sin Recall Activo ({{ overdue_patients|length }})</div>
+    <span style="font-size:12px;color:#92400e;">Recall vencido pero sin registro</span>
+  </div>
+  <div>
+    {% for p in overdue_patients %}
+    <div class="recall-item" style="background:#fffbeb;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13.5px;">
+          <a href="{{ url_for('patient_profile', pid=p.id) }}" style="color:var(--text);">
+            {{ p.last_name }}, {{ p.first_name }}
+          </a>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          {{ icon_phone() }} {{ p.phone or 'Sin teléfono' }}
+          · Recall previsto: <strong style="color:var(--warning);">{{ p.next_recall_date }}</strong>
+          · Intervalo: {{ p.recall_interval }} meses
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <form method="POST" action="{{ url_for('recall_new') }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="patient_id" value="{{ p.id }}">
+          <input type="hidden" name="due_date" value="{{ today }}">
+          <input type="hidden" name="notes" value="Recall vencido - creado automáticamente">
+          <button type="submit" class="btn btn-warning btn-sm">{{ icon_plus() }} Crear Recall</button>
+        </form>
+        <a href="{{ url_for('appointment_new') }}?patient_id={{ p.id }}" class="btn btn-primary btn-sm">{{ icon_calendar() }} Cita</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not recalls and not overdue_patients %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">{{ icon_bell() }}</div>
+    <div class="empty-state-title">Sin recalls pendientes</div>
+    <div class="empty-state-text">No hay recalls activos en este momento.</div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

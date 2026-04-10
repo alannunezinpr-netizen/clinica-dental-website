@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>429 – Demasiadas Solicitudes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+<div class="error-page">
+  <div>
+    <div class="error-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="error-code">429</div>
+    <div class="error-title">Demasiadas Solicitudes</div>
+    <div class="error-text">Has excedido el límite de solicitudes permitidas.<br>Espera un momento antes de intentar de nuevo.</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <a href="javascript:history.back()" class="btn btn-secondary">← Regresar</a>
+      <a href="/" class="btn btn-primary">Dashboard</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

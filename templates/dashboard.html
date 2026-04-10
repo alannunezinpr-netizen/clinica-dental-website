@@ -1,0 +1,277 @@
+{% from "icons.html" import icon_users, icon_calendar, icon_task, icon_bell, icon_alert, icon_check, icon_plus, icon_note, icon_phone, icon_activity, icon_clipboard %}
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- STAT CARDS -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon stat-icon-blue">{{ icon_users() }}</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ total_patients }}</div>
+      <div class="stat-label">Pacientes Activos</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon stat-icon-teal">{{ icon_calendar() }}</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ today_count }}</div>
+      <div class="stat-label">Citas Hoy</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon stat-icon-amber">{{ icon_task() }}</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ pending_tasks }}</div>
+      <div class="stat-label">Tareas Pendientes</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon stat-icon-red">{{ icon_bell() }}</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ overdue_recalls|length }}</div>
+      <div class="stat-label">Recalls Vencidos</div>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="quick-actions" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+  <a href="{{ url_for('patient_new') }}" class="quick-action-btn">
+    <div class="quick-action-icon">{{ icon_users() }}</div>
+    <span>Nuevo Paciente</span>
+  </a>
+  <a href="{{ url_for('appointment_new') }}" class="quick-action-btn">
+    <div class="quick-action-icon">{{ icon_calendar() }}</div>
+    <span>Nueva Cita</span>
+  </a>
+  {% if current_user.role in ['admin', 'dentist'] %}
+  <a href="{{ url_for('note_new') }}" class="quick-action-btn">
+    <div class="quick-action-icon">{{ icon_note() }}</div>
+    <span>Agregar Nota</span>
+  </a>
+  {% else %}
+  <a href="{{ url_for('tasks_list') }}" class="quick-action-btn">
+    <div class="quick-action-icon">{{ icon_task() }}</div>
+    <span>Ver Tareas</span>
+  </a>
+  {% endif %}
+  <a href="{{ url_for('recalls_list') }}" class="quick-action-btn">
+    <div class="quick-action-icon">{{ icon_bell() }}</div>
+    <span>Recalls</span>
+  </a>
+</div>
+
+<!-- MAIN GRID: Today's Appointments + Tasks -->
+<div class="dashboard-grid" style="margin-bottom: 20px;">
+
+  <!-- TODAY'S APPOINTMENTS -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ icon_calendar() }} Citas de Hoy</div>
+      <a href="{{ url_for('appointments_list', view='today') }}" class="btn btn-ghost btn-sm">Ver todas</a>
+    </div>
+    <div class="card-body" style="padding: 12px;">
+      {% if today_appts %}
+        {% for a in today_appts %}
+        <div class="appt-card status-{{ a.status }}" data-appt-card="{{ a.id }}">
+          <div class="appt-time">{{ a.time[:5] }}</div>
+          <div class="appt-info">
+            <div class="appt-patient">
+              <a href="{{ url_for('patient_profile', pid=a.patient_id) }}" style="color:inherit;font-weight:700;">
+                {{ a.last_name }}, {{ a.first_name }}
+              </a>
+              {% if a.medical_alerts %}
+              <span class="badge badge-red" style="margin-left:6px;" title="{{ a.medical_alerts }}">{{ icon_alert() }} Alerta</span>
+              {% endif %}
+            </div>
+            <div class="appt-reason">{{ a.reason or 'Sin motivo especificado' }}</div>
+            <div class="appt-meta">{{ icon_phone() }} {{ a.phone or 'N/A' }} · {{ a.duration }} min · {{ a.dentist_name }}</div>
+          </div>
+          <div class="appt-actions">
+            <span class="badge badge-{{ STATUS_COLORS.get(a.status, 'gray') }}" data-appt-badge="{{ a.id }}">
+              {{ a.status.replace('_',' ').title() }}
+            </span>
+            <div style="position:relative;">
+              <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+                      class="btn btn-ghost btn-icon btn-sm" title="Cambiar estado">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </button>
+              <div style="display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:100;min-width:160px;">
+                {% for s, label in [('confirmed','Confirmar'),('checked_in','Check-In'),('completed','Completada'),('cancelled','Cancelar'),('no_show','No Show')] %}
+                <form method="POST" action="{{ url_for('appointment_status', aid=a.id) }}" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="{{ s }}">
+                  <button type="submit" class="dropdown-item">{{ label }}</button>
+                </form>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding: 40px 20px;">
+          <div class="empty-state-icon">{{ icon_calendar() }}</div>
+          <div class="empty-state-title">Sin citas para hoy</div>
+          <div class="empty-state-text">No hay citas programadas para hoy.</div>
+          <a href="{{ url_for('appointment_new') }}" class="btn btn-primary btn-sm">{{ icon_plus() }} Programar Cita</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: Tasks + Recalls -->
+  <div>
+    <!-- MY TASKS -->
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="card-header">
+        <div class="card-title">{{ icon_task() }} Mis Tareas</div>
+        <a href="{{ url_for('tasks_list') }}" class="btn btn-ghost btn-sm">Ver todas</a>
+      </div>
+      <!-- Quick task form -->
+      <div style="padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg);">
+        <form method="POST" action="{{ url_for('task_new') }}" style="display:flex;gap:6px;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="title" class="form-control" placeholder="Nueva tarea rápida..." required style="font-size:12.5px;padding:6px 10px;">
+          <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap;">{{ icon_plus() }} Crear</button>
+        </form>
+      </div>
+      <div style="padding: 8px;">
+        {% if my_tasks %}
+          {% for t in my_tasks %}
+          <div class="task-item priority-{{ t.priority }}" data-task="{{ t.id }}">
+            <input type="checkbox" class="task-done-check" data-tid="{{ t.id }}"
+                   style="width:15px;height:15px;accent-color:var(--success);flex-shrink:0;margin-top:2px;">
+            <div style="flex:1;min-width:0;">
+              <div class="task-title">{{ t.title }}</div>
+              <div class="task-meta">
+                {% if t.first_name %}{{ t.last_name }}, {{ t.first_name }} · {% endif %}
+                <span class="badge badge-{{ 'red' if t.priority=='urgent' else 'orange' if t.priority=='high' else 'blue' if t.priority=='normal' else 'gray' }}">
+                  {{ t.priority.title() }}
+                </span>
+                {% if t.due_date %} · {{ t.due_date }}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state" style="padding:28px 16px;">
+            <div class="empty-state-icon">{{ icon_task() }}</div>
+            <div class="empty-state-title" style="font-size:13.5px;">Sin tareas pendientes</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- OVERDUE RECALLS -->
+    {% if overdue_recalls %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">{{ icon_bell() }} Recalls Vencidos</div>
+        <a href="{{ url_for('recalls_list') }}" class="btn btn-ghost btn-sm">Ver todos</a>
+      </div>
+      <div>
+        {% for r in overdue_recalls %}
+        <div class="recall-item overdue">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;">
+              <a href="{{ url_for('patient_profile', pid=r.patient_id) }}" style="color:inherit;">
+                {{ r.last_name }}, {{ r.first_name }}
+              </a>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;gap:5px;margin-top:2px;">
+              {{ icon_phone() }} {{ r.phone or 'Sin teléfono' }} · Vencido: {{ r.due_date }}
+            </div>
+          </div>
+          <span class="badge badge-red">Vencido</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- UPCOMING APPOINTMENTS + ACTIVITY -->
+<div class="dashboard-grid-2">
+
+  <!-- UPCOMING -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ icon_calendar() }} Próximas Citas (4 días)</div>
+      <a href="{{ url_for('appointments_list', view='week') }}" class="btn btn-ghost btn-sm">Ver semana</a>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if upcoming %}
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th>Fecha/Hora</th>
+              <th>Paciente</th>
+              <th>Motivo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in upcoming %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:13px;">{{ a.date }}</div>
+                <div style="color:var(--text-muted);font-size:11.5px;">{{ a.time[:5] }}</div>
+              </td>
+              <td>
+                <a href="{{ url_for('patient_profile', pid=a.patient_id) }}" style="font-weight:600;font-size:13px;">
+                  {{ a.last_name }}, {{ a.first_name }}
+                </a>
+              </td>
+              <td style="font-size:13px;color:var(--text-muted);">{{ a.reason or '—' }}</td>
+              <td>
+                <span class="badge badge-{{ STATUS_COLORS.get(a.status, 'gray') }}">{{ a.status.replace('_',' ').title() }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state" style="padding:40px 20px;">
+          <div class="empty-state-icon">{{ icon_calendar() }}</div>
+          <div class="empty-state-title">Sin citas próximas</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RECENT ACTIVITY -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ icon_activity() }} Actividad Reciente</div>
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('admin_activity') }}" class="btn btn-ghost btn-sm">Ver todo</a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% for log in activity %}
+      <div class="activity-item">
+        <div class="activity-icon" style="background:var(--primary-light);color:var(--primary);">
+          {% if 'login' in log.action %}{{ icon_check() }}
+          {% elif 'patient' in log.action %}{{ icon_users() }}
+          {% elif 'appointment' in log.action %}{{ icon_calendar() }}
+          {% elif 'note' in log.action %}{{ icon_note() }}
+          {% elif 'task' in log.action %}{{ icon_task() }}
+          {% else %}{{ icon_clipboard() }}{% endif %}
+        </div>
+        <div class="activity-text">
+          <div class="activity-action">{{ log.action.replace('_',' ').title() }}</div>
+          <div class="activity-meta">{{ log.username }} {% if log.details %}· {{ log.details[:40] }}{% endif %}</div>
+        </div>
+        <div class="activity-time">{{ log.created_at[11:16] if log.created_at else '' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,156 @@
+{% from "icons.html" import icon_search, icon_alert, icon_edit, icon_calendar, icon_plus, icon_check, icon_phone, icon_filter %}
+{% extends "base.html" %}
+{% block title %}Citas{% endblock %}
+{% block page_title %}Citas{% endblock %}
+
+{% block content %}
+
+<!-- VIEW TABS + FILTERS -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body" style="padding:14px 18px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+      <div class="filter-tabs">
+        {% for v, label in [('today','Hoy'),('tomorrow','Mañana'),('week','Esta Semana'),('upcoming','Próximas')] %}
+        <a href="{{ url_for('appointments_list', view=v, status=status_filter, dentist=dentist_filter) }}"
+           class="filter-tab {{ 'active' if view==v }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <a href="{{ url_for('appointment_new') }}" class="btn btn-primary btn-sm" style="margin-left:auto;">{{ icon_plus() }} Nueva Cita</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('appointments_list') }}">
+      <input type="hidden" name="view" value="{{ view }}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div class="search-wrapper" style="flex:1;min-width:180px;position:relative;">
+          <span class="search-icon">{{ icon_search() }}</span>
+          <input type="text" name="q" value="{{ q }}" class="form-control search-input"
+                 placeholder="Buscar paciente o motivo...">
+        </div>
+        <select name="status" class="form-control" style="min-width:150px;">
+          <option value="">Todos los estados</option>
+          {% for s, label in [('scheduled','Programada'),('confirmed','Confirmada'),('checked_in','Check-In'),('completed','Completada'),('cancelled','Cancelada'),('no_show','No Show')] %}
+          <option value="{{ s }}" {{ 'selected' if status_filter==s }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="dentist" class="form-control" style="min-width:160px;">
+          <option value="">Todos los dentistas</option>
+          {% for d in dentists %}
+          <option value="{{ d.id }}" {{ 'selected' if dentist_filter==d.id|string }}>{{ d.full_name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ icon_filter() }} Filtrar</button>
+        {% if q or status_filter or dentist_filter %}
+        <a href="{{ url_for('appointments_list', view=view) }}" class="btn btn-ghost btn-sm">Limpiar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- APPOINTMENT LIST -->
+{% if appointments %}
+  {% set ns = namespace(current_date='') %}
+  {% for a in appointments %}
+    {% if a.date != ns.current_date %}
+      {% if ns.current_date != '' %}</div>{% endif %}
+      <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">
+          {% if a.date == today %}HOY – {{ a.date }}{% else %}{{ a.date }}{% endif %}
+        </div>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      {% set ns.current_date = a.date %}
+    {% endif %}
+
+    <div class="appt-card status-{{ a.status }}" data-appt-card="{{ a.id }}">
+      <!-- TIME -->
+      <div style="text-align:center;min-width:60px;">
+        <div style="font-size:16px;font-weight:800;color:var(--text);">{{ a.time[:5] }}</div>
+        <div style="font-size:11px;color:var(--text-muted);">{{ a.duration }}min</div>
+      </div>
+
+      <!-- PATIENT INFO -->
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <a href="{{ url_for('patient_profile', pid=a.patient_id) }}"
+             style="font-weight:700;font-size:14px;color:var(--text);">
+            {{ a.last_name }}, {{ a.first_name }}
+          </a>
+          {% if a.medical_alerts %}
+          <span class="badge badge-red" title="{{ a.medical_alerts }}">{{ icon_alert() }} Alerta</span>
+          {% endif %}
+          <span class="badge badge-{{ STATUS_COLORS.get(a.status,'gray') }}" data-appt-badge="{{ a.id }}">
+            {{ a.status.replace('_',' ').title() }}
+          </span>
+          <span class="badge badge-{{ STATUS_COLORS.get(a.payment_status,'gray') }}">
+            {{ a.payment_status.title() if a.payment_status else 'Sin pago' }}
+          </span>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">
+          {{ a.reason or 'Sin motivo especificado' }}
+        </div>
+        <div style="font-size:11.5px;color:var(--text-light);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>{{ a.dentist_name }}</span>
+          {% if a.phone %}<span>{{ icon_phone() }} {{ a.phone }}</span>{% endif %}
+          {% if a.notes %}<span>· {{ a.notes[:50] }}</span>{% endif %}
+        </div>
+        {% if a.cancellation_reason %}
+        <div style="font-size:12px;color:var(--danger);margin-top:2px;">
+          Razón de cancelación: {{ a.cancellation_reason }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="appt-actions" style="flex-direction:column;align-items:flex-end;gap:6px;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+          {% if a.status == 'scheduled' %}
+          <form method="POST" action="{{ url_for('appointment_status', aid=a.id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="confirmed">
+            <button type="submit" class="btn btn-teal btn-sm">{{ icon_check() }} Confirmar</button>
+          </form>
+          {% endif %}
+          {% if a.status in ['scheduled','confirmed'] %}
+          <form method="POST" action="{{ url_for('appointment_status', aid=a.id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="checked_in">
+            <button type="submit" class="btn btn-secondary btn-sm">Check-In</button>
+          </form>
+          {% endif %}
+          {% if a.status in ['scheduled','confirmed','checked_in'] %}
+          <form method="POST" action="{{ url_for('appointment_status', aid=a.id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="completed">
+            <button type="submit" class="btn btn-success btn-sm">{{ icon_check() }} Completar</button>
+          </form>
+          <form method="POST" action="{{ url_for('appointment_status', aid=a.id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="no_show">
+            <button type="submit" class="btn btn-warning btn-sm">No Show</button>
+          </form>
+          {% endif %}
+          <a href="{{ url_for('appointment_edit', aid=a.id) }}" class="btn btn-ghost btn-sm btn-icon" title="Editar">{{ icon_edit() }}</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+
+  <div style="font-size:12.5px;color:var(--text-muted);text-align:center;margin-top:8px;">
+    {{ appointments|length }} cita(s) — {{ date_label }}
+  </div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">{{ icon_calendar() }}</div>
+    <div class="empty-state-title">Sin citas para este período</div>
+    <div class="empty-state-text">No hay citas {{ date_label.lower() }}.</div>
+    <a href="{{ url_for('appointment_new') }}" class="btn btn-primary">{{ icon_plus() }} Programar Cita</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

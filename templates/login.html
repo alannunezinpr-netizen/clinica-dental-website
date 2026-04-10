@@ -1,0 +1,108 @@
+{% from "icons.html" import icon_tooth, icon_map_pin, icon_phone, icon_clock, icon_user_lg, icon_lock, icon_alert, icon_eye, icon_eye_off %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión – Clínica Dental Familiar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+<div class="login-page">
+
+  <!-- LEFT BRAND PANEL -->
+  <div class="login-brand">
+    <div class="login-logo">
+      {{ icon_tooth() }}
+    </div>
+    <div class="login-brand-title">Clínica Dental Familiar<br>&amp; Dentista Pediátrico</div>
+    <div class="login-brand-sub">Dra. Maria I. Berrios Hernandez</div>
+
+    <div class="login-info-cards">
+      <div class="login-info-card">
+        <div>{{ icon_map_pin() }}</div>
+        <div>
+          <div class="login-info-label">Dirección</div>
+          <div class="login-info-value">Plaza Nazario Suite B4<br>Gurabo, PR 00778</div>
+        </div>
+      </div>
+      <div class="login-info-card">
+        <div>{{ icon_phone() }}</div>
+        <div>
+          <div class="login-info-label">Teléfono</div>
+          <div class="login-info-value">787-737-9150</div>
+        </div>
+      </div>
+      <div class="login-info-card">
+        <div>{{ icon_clock() }}</div>
+        <div>
+          <div class="login-info-label">Horario</div>
+          <div class="login-info-value">Mar–Jue: 9am–3:30pm<br>Sáb: 9am–12:30pm</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM PANEL -->
+  <div class="login-form-area">
+    <div class="login-card">
+      <div class="login-title">Bienvenido</div>
+      <div class="login-subtitle">Ingresa tus credenciales para acceder al sistema.</div>
+
+      {% if error %}
+      <div class="login-error">
+        {{ icon_alert() }}
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+          <label class="form-label form-label-required">Usuario</label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex;align-items:center;">
+              {{ icon_user_lg() }}
+            </span>
+            <input type="text" name="username" class="form-control" placeholder="nombre.usuario"
+                   autocomplete="username" autofocus required style="padding-left:38px;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required">Contraseña</label>
+          <div class="password-wrapper" style="position:relative;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex;align-items:center;z-index:1;">
+              {{ icon_lock() }}
+            </span>
+            <input type="password" name="password" id="password-field" class="form-control"
+                   placeholder="••••••••" autocomplete="current-password" required
+                   style="padding-left:38px;padding-right:42px;">
+            <button type="button" class="password-toggle" id="pwd-toggle-btn" onclick="togglePassword()">
+              <span id="pwd-eye-icon">{{ icon_eye() }}</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" style="justify-content:center;padding:11px;margin-top:4px;">
+          Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePassword() {
+  const f = document.getElementById('password-field');
+  const icon = document.getElementById('pwd-eye-icon');
+  if (f.type === 'password') {
+    f.type = 'text';
+    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  } else {
+    f.type = 'password';
+    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+}
+</script>
+</body>
+</html>

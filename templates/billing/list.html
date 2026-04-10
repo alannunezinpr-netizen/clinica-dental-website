@@ -1,0 +1,192 @@
+{% from "icons.html" import icon_dollar, icon_check, icon_search, icon_filter, icon_x, icon_credit_card %}
+{% extends "base.html" %}
+{% block title %}Facturación{% endblock %}
+{% block page_title %}Facturación{% endblock %}
+
+{% block content %}
+
+<!-- SUMMARY CARDS -->
+<div class="billing-summary">
+  <div class="billing-summary-card">
+    <div class="billing-amount" style="color:var(--text);">${{ '%.2f'|format(totals.total) }}</div>
+    <div class="billing-label">Total Facturado</div>
+  </div>
+  <div class="billing-summary-card">
+    <div class="billing-amount" style="color:var(--success);">${{ '%.2f'|format(totals.paid) }}</div>
+    <div class="billing-label">Pagado</div>
+  </div>
+  <div class="billing-summary-card">
+    <div class="billing-amount" style="color:var(--danger);">${{ '%.2f'|format(totals.unpaid) }}</div>
+    <div class="billing-label">Pendiente</div>
+  </div>
+  <div class="billing-summary-card">
+    <div class="billing-amount" style="color:var(--warning);">${{ '%.2f'|format(totals.partial) }}</div>
+    <div class="billing-label">Parcial</div>
+  </div>
+</div>
+
+<!-- FILTERS + ADD -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body" style="padding:12px 18px;">
+    <form method="GET" action="{{ url_for('billing_list') }}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div class="search-wrapper" style="flex:1;min-width:180px;position:relative;">
+          <span class="search-icon">{{ icon_search() }}</span>
+          <input type="text" name="q" value="{{ q }}" class="form-control search-input"
+                 placeholder="Buscar por paciente...">
+        </div>
+        <div class="filter-tabs">
+          <a href="{{ url_for('billing_list') }}" class="filter-tab {{ 'active' if not status_filter }}">Todos</a>
+          <a href="{{ url_for('billing_list', status='unpaid') }}" class="filter-tab {{ 'active' if status_filter=='unpaid' }}">Pendientes</a>
+          <a href="{{ url_for('billing_list', status='partial') }}" class="filter-tab {{ 'active' if status_filter=='partial' }}">Parciales</a>
+          <a href="{{ url_for('billing_list', status='paid') }}" class="filter-tab {{ 'active' if status_filter=='paid' }}">Pagados</a>
+        </div>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ icon_filter() }} Filtrar</button>
+        <button type="button" onclick="openModal('new-payment-modal')" class="btn btn-primary btn-sm">{{ icon_dollar() }} Nuevo Pago</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PAYMENT TABLE -->
+{% if payments %}
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Paciente</th>
+        <th>Fecha</th>
+        <th>Cita</th>
+        <th>Monto</th>
+        <th>Método</th>
+        <th>Estado</th>
+        <th>Notas</th>
+        <th style="text-align:right;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td>
+          <a href="{{ url_for('patient_profile', pid=p.patient_id) }}"
+             style="font-weight:700;color:var(--text);">
+            {{ p.last_name }}, {{ p.first_name }}
+          </a>
+        </td>
+        <td style="font-size:12.5px;color:var(--text-muted);">{{ p.created_at[:10] }}</td>
+        <td style="font-size:12.5px;color:var(--text-muted);">
+          {% if p.appt_date %}{{ p.appt_date }}{% if p.appt_reason %}<br><span style="font-size:11px;">{{ p.appt_reason[:30] }}</span>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-weight:800;font-size:15px;color:{{ 'var(--success)' if p.status=='paid' else 'var(--danger)' if p.status=='unpaid' else 'var(--warning)' }};">
+          ${{ '%.2f'|format(p.amount) }}
+        </td>
+        <td style="font-size:12.5px;">
+          {% if p.method %}
+            {{ p.method.replace('_',' ').title() }}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="badge badge-{{ STATUS_COLORS.get(p.status,'gray') }}">
+            {{ 'Pagado' if p.status=='paid' else 'Pendiente' if p.status=='unpaid' else 'Parcial' }}
+          </span>
+        </td>
+        <td style="font-size:12px;color:var(--text-muted);max-width:160px;" class="truncate">
+          {{ p.notes or '—' }}
+        </td>
+        <td>
+          <div class="table-actions">
+            <form method="POST" action="{{ url_for('billing_status', bid=p.id) }}" style="margin:0;">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <select name="status" class="form-control" style="padding:4px 8px;font-size:12px;width:auto;"
+                      onchange="this.form.submit()">
+                <option value="unpaid" {{ 'selected' if p.status=='unpaid' }}>Pendiente</option>
+                <option value="partial" {{ 'selected' if p.status=='partial' }}>Parcial</option>
+                <option value="paid" {{ 'selected' if p.status=='paid' }}>Pagado</option>
+              </select>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div style="padding:10px 16px;font-size:12.5px;color:var(--text-muted);">
+  {{ payments|length }} registro(s)
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">{{ icon_dollar() }}</div>
+    <div class="empty-state-title">Sin registros de pago</div>
+    <div class="empty-state-text">No se encontraron registros de pago.</div>
+    <button onclick="openModal('new-payment-modal')" class="btn btn-primary">{{ icon_dollar() }} Agregar Pago</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- NEW PAYMENT MODAL -->
+<div id="new-payment-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">{{ icon_dollar() }} Nuevo Registro de Pago</div>
+      <button class="modal-close" onclick="closeModal('new-payment-modal')">{{ icon_x() }}</button>
+    </div>
+    <form method="POST" action="{{ url_for('billing_new') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label form-label-required">Paciente</label>
+          <div class="search-wrapper" style="position:relative;">
+            <span class="search-icon">{{ icon_search() }}</span>
+            <input type="text" id="billing-patient-search" class="form-control search-input"
+                   placeholder="Buscar paciente..." autocomplete="off">
+            <input type="hidden" name="patient_id" id="billing_patient_id" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Monto ($)</label>
+            <input type="number" name="amount" class="form-control" step="0.01" min="0" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select name="status" class="form-control">
+              <option value="unpaid">Pendiente</option>
+              <option value="paid">Pagado</option>
+              <option value="partial">Parcial</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Método de Pago</label>
+          <select name="method" class="form-control">
+            <option value="">Sin especificar</option>
+            <option value="cash">Efectivo</option>
+            <option value="credit_card">Tarjeta de Crédito</option>
+            <option value="debit_card">Tarjeta de Débito</option>
+            <option value="check">Cheque</option>
+            <option value="insurance">Seguro</option>
+          </select>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">Notas</label>
+          <input type="text" name="notes" class="form-control" placeholder="Observaciones...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('new-payment-modal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">{{ icon_check() }} Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initPatientSearch('billing-patient-search', 'billing_patient_id', 'billing-patient-search');
+</script>
+{% endblock %}

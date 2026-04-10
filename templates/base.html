@@ -1,0 +1,143 @@
+{% from "icons.html" import icon_home, icon_users, icon_calendar, icon_clipboard, icon_bell, icon_credit_card, icon_user, icon_activity, icon_plus, icon_logout, icon_note, icon_task, icon_dollar, icon_check, icon_alert, icon_x, icon_tooth %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DentaCare{% endblock %} – Clínica Dental Familiar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script>window.CSRF_TOKEN = "{{ csrf_token() }}";</script>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <a href="{{ url_for('dashboard') }}" class="sidebar-logo">
+      <div class="sidebar-logo-icon">CD</div>
+      <div>
+        <span class="sidebar-logo-title">Clínica Dental</span>
+        <span class="sidebar-logo-sub">Sistema de Gestión</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">General</div>
+        <a href="{{ url_for('dashboard') }}" class="sidebar-link">
+          {{ icon_home() }} Dashboard
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Clínica</div>
+        <a href="{{ url_for('patients_list') }}" class="sidebar-link">
+          {{ icon_users() }} Pacientes
+        </a>
+        <a href="{{ url_for('appointments_list') }}" class="sidebar-link">
+          {{ icon_calendar() }} Citas
+        </a>
+        {% if current_user.role in ['admin', 'dentist'] %}
+        <a href="{{ url_for('note_new') }}" class="sidebar-link">
+          {{ icon_note() }} Notas Clínicas
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Gestión</div>
+        <a href="{{ url_for('tasks_list') }}" class="sidebar-link">
+          {{ icon_task() }} Tareas
+        </a>
+        <a href="{{ url_for('recalls_list') }}" class="sidebar-link">
+          {{ icon_bell() }} Recalls
+        </a>
+        <a href="{{ url_for('billing_list') }}" class="sidebar-link">
+          {{ icon_dollar() }} Facturación
+        </a>
+      </div>
+
+      {% if current_user.role == 'admin' %}
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Administración</div>
+        <a href="{{ url_for('admin_users') }}" class="sidebar-link">
+          {{ icon_user() }} Usuarios
+        </a>
+        <a href="{{ url_for('admin_activity') }}" class="sidebar-link">
+          {{ icon_activity() }} Actividad
+        </a>
+      </div>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">{{ current_user.full_name[:2]|upper }}</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">{{ current_user.full_name }}</div>
+          <div class="sidebar-user-role">
+            {% if current_user.role == 'admin' %}Administrador
+            {% elif current_user.role == 'dentist' %}Dentista
+            {% else %}Recepción{% endif %}
+          </div>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn-logout">
+        {{ icon_logout() }} Cerrar Sesión
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      <div class="topbar-right">
+        <div class="topbar-date" id="topbar-date"></div>
+        <div class="topbar-actions">
+          <a href="{{ url_for('appointment_new') }}" class="btn btn-primary btn-sm">
+            {{ icon_plus() }} Nueva Cita
+          </a>
+          <a href="{{ url_for('patient_new') }}" class="btn btn-secondary btn-sm">
+            {{ icon_plus() }} Paciente
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-container">
+        {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">
+          {% if cat == 'success' %}{{ icon_check() }}
+          {% elif cat == 'error' %}{{ icon_alert() }}
+          {% elif cat == 'warning' %}{{ icon_alert() }}
+          {% else %}{{ icon_alert() }}{% endif %}
+          <span>{{ msg }}</span>
+          <button class="flash-close" type="button">{{ icon_x() }}</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- CONTENT -->
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  const d = new Date();
+  document.getElementById('topbar-date').textContent = d.toLocaleDateString('es-PR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
