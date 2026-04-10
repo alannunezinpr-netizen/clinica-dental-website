@@ -31,14 +31,23 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-with app.app_context():
-    init_db()
-
 @app.teardown_appcontext
 def teardown_db(exception):
     from flask import g
     db = g.pop('_database', None)
     close_db(db)
+
+_db_ready = False
+
+@app.before_request
+def ensure_db_initialized():
+    global _db_ready
+    if not _db_ready:
+        try:
+            init_db()
+            _db_ready = True
+        except Exception as e:
+            app.logger.error(f"DB init error: {e}")
 
 class User(UserMixin):
     def __init__(self, row):
